@@ -8,22 +8,26 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class GameViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet weak var guessedLetter: UITextField!
     var guessWord = ""
     var wordGuessedCorrectly = false
-    let MAX_ALLOWED_GUESSES = 6
+    var gameLevel = 0
+    var MAX_ALLOWED_GUESSES = 6
     
     var currentGuessNumber = 1
     var numOfCorrectGuesses = 0
     var numOfWrongGuesses = 0
     var usedLetters: [Character] = []
+    var wordList: [String]?
+
     
     @IBOutlet weak var guessedWordLabel: UILabel!
     @IBOutlet weak var message: UILabel!
     
+    @IBOutlet weak var hangmanImage: UIImageView!
     @IBOutlet weak var guessWordLabel: UILabel!
-    
+    //differentiate between variables with more unique names
     @IBAction func submitButton(_ sender: UIButton) {
         if (guessedLetter.text == "") {
             message.text = "Enter a letter"
@@ -31,17 +35,19 @@ class ViewController: UIViewController {
         }
         let msg = isLetterInWord((guessedLetter.text?.characters.first!)!)
         if wordGuessedCorrectly {
-            message.text = "Yay you won!\n The word was " + guessWord
+            message.text = "Yay you won!\nThe word was " + guessWord
             submitButton.isHidden = true
             playAgainButton.isHidden = false
         } else if currentGuessNumber >  MAX_ALLOWED_GUESSES {
-            message.text = "Boo you lost!\n The word was " + guessWord
+            message.text = "Boo you lost!\nThe word was " + guessWord
             submitButton.isHidden = true
             playAgainButton.isHidden = false
+            var imgName = "Hangman" + String(gameLevel+1) + String(MAX_ALLOWED_GUESSES-1)
+            let newImg: UIImage? = UIImage(named: imgName)
+            hangmanImage.image = newImg
         } else {
             message.text = msg
         }
-        
         
         guessedLetter.text = ""
         guessedWordLabel.text = getmaskedGuessWord()
@@ -61,20 +67,49 @@ class ViewController: UIViewController {
         numOfWrongGuesses = 0
         usedLetters = []
         guessWord = getWordToGuess()
-        guessedWordLabel.text = getmaskedGuessWord()
+        guessedWordLabel!.text = getmaskedGuessWord()
         //guessWordLabel.text = guessWord
+        let imgName = "Hangman" + String(gameLevel+1) + "1"
+        let newImg: UIImage? = UIImage(named: imgName)
+        hangmanImage.image = newImg
     }
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        message.text = ""
-        guessedLetter.text = ""
+        // load word list
+        do {
+            if let path = Bundle.main.path(forResource: "wordList", ofType: "txt"){
+                let data = try String(contentsOfFile:path, encoding: String.Encoding.utf8)
+                wordList = data.components(separatedBy: "\n")
+                print(wordList)
+            }
+        } catch let err as NSError {
+            // do something with Error
+            print(err)
+        }
+        
         guessWord = getWordToGuess()
         //guessWordLabel.text = guessWord
 
-        guessedWordLabel.text = getmaskedGuessWord()
+        guessedWordLabel!.text = getmaskedGuessWord()
+        
         submitButton.isHidden = false
         playAgainButton.isHidden = true
+        
+        // set MAX_ALLOWED_GUESSES based on gameLevel
+        if gameLevel == 0 {
+            MAX_ALLOWED_GUESSES = 6
+        } else if gameLevel == 1 {
+            MAX_ALLOWED_GUESSES = 12
+        } else if gameLevel == 2 {
+            MAX_ALLOWED_GUESSES = 16
+        }
+        print (">>> GAME LEVEL:" + String(gameLevel))
+        message.text = "You have " + String(MAX_ALLOWED_GUESSES-currentGuessNumber+1) + " guesses left"
+        self.guessedLetter.delegate = self;
+        let imgName = "Hangman" + String(gameLevel+1) + "1"
+        let newImg: UIImage? = UIImage(named: imgName)
+        hangmanImage.image = newImg
     }
 
     func getmaskedGuessWord() -> String {
@@ -89,10 +124,12 @@ class ViewController: UIViewController {
         return gwl
     }
     func getWordToGuess() -> String {
-        var words = ["dog", "cat", "mouse", "casti","plate","nap","candy","the","tree","man","leash","red","blue","white","block","tail","fur","head","tile","zoo","punch","kick","nose","wet","dry","done","eye"]
+//        var words = ["dog", "cat", "mouse", "casti","plate","nap","candy","the","tree","man","leash","red","blue","white","block","tail","fur","head","tile","zoo","punch","kick","nose","wet","dry","done","eye"]
 
-        let randomNumber = Int(arc4random_uniform(UInt32(words.count)) )
-        let word = words[randomNumber]
+//        let randomNumber = Int(arc4random_uniform(UInt32(words.count)) )
+//        let word = words[randomNumber]
+        let randomNumber = Int(arc4random_uniform(UInt32(wordList!.count)) )
+        let word = wordList![randomNumber]
         return word
     }
     
@@ -124,11 +161,20 @@ class ViewController: UIViewController {
             numOfWrongGuesses += 1
             msg = "Nope! \"\(letter)\" is not in the word."
             msg += "\nYou have \(MAX_ALLOWED_GUESSES - currentGuessNumber) guesses left."
+            //Change image
+            var imgName = "Hangman" + String(gameLevel+1) +  String(numOfWrongGuesses+1)
+            let newImg: UIImage? = UIImage(named: imgName)
+            hangmanImage.image = newImg
         }
         currentGuessNumber += 1
         return msg
     }
-
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.view.endEditing(true)
+        return false
+    }
+    
     func playTheGame() {
         var currentGuessNumber = 1
         var words = ["dog", "cat", "mouse", "casti","plate","nap","candy","the","tree","man","leash","red","blue","white","block","tail","fur","head","tile","zoo","punch","kick","nose","wet","dry","done","eye"]
